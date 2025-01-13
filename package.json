@@ -1,0 +1,30 @@
+{
+  "name": "vontrol",
+  "version": "0.0.1",
+  "description": "Volume control using keyboard shortcuts that allow to switch between available outputs",
+  "main": "app.js",
+  "scripts": {
+    "test": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "keywords": [
+    "volume",
+    "controller",
+    "volume"
+  ],
+  "author": "DarkT",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "native-sound-mixer": "^3.4.5-win"
+  }
+}

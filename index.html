@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vontrol</title>
+    <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+    <div class="root">
+        <div class="container selected-output" style="display: none;">
+            <span class="stext">Selected Output</span>
+            <div class="device">
+                <img src="assets/images/headphone.png" class="device-icon-style device-icon">
+                <span class="device-name-style device-name">{{Name}}</span>
+            </div>
+        </div>
+
+        <div class="container volume-update" style="display: none;">
+            <span class="stext-vol">{{Name}}</span>
+            <div class="volume">
+                <img src="assets/images/headphone.png" class="volume-icon">
+                <div class="volume-bar">
+                    <div class="volume-value"></div>
+                </div>
+                <span class="volume-text">{{volume}}</span>
+            </div>
+        </div>
+
+        <div class="container added-device" style="display: none;">
+            <span class="stext">New Device</span>
+            <div class="device">
+                <img src="assets/images/headphone.png" class="device-icon-style added-icon">
+                <span class="device-name-style new-device-name">{{Name}}</span>
+            </div>
+        </div>
+
+        <div class="container removed-device" style="display: none;">
+            <span class="stext">Removed Device</span>
+            <div class="device">
+                <img src="assets/images/headphone.png" class="device-icon-style removed-icon">
+                <span class="device-name-style removed-device-name">{{Name}}</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/jquery-3.7.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            window.api.send("init")
+        });
+    </script>
+    <script>
+        var selectTimeout, volumeTimeout, addedTimeout, removedTimeout
+        window.api.receive("device-update", (data) => {
+            $('.selected-output').show(150)
+            clearTimeout(selectTimeout)
+            selectTimeout = setTimeout(()=>{
+                $('.selected-output').hide(150)
+            }, 1000)
+            updateDevice(data)
+        })
+
+        window.api.receive("volume-update", (data) => {
+            $('.volume-update').show(150)
+            clearTimeout(volumeTimeout)
+            volumeTimeout = setTimeout(()=>{
+                $('.volume-update').hide(150)
+            }, 1000)
+            updateVolume(data)
+        })
+
+        window.api.receive("new-device", (data) => {
+            $('.added-device').show(150)
+            clearTimeout(addedTimeout)
+            addedTimeout = setTimeout(()=>{
+                $('.added-device').hide(150)
+            }, 2000)
+            newDevice(data)
+        })
+
+        window.api.receive("removed-device", (data) => {
+            $('.removed-device').show(150)
+            clearTimeout(removedTimeout)
+            removedTimeout = setTimeout(()=>{
+                $('.removed-device').hide(150)
+            }, 2000)
+            removedDevice(data)
+        })
+
+        const updateDevice = (device) => {
+            $('.device-name').text(device.name)
+            if(device.type == "Headphones"){
+                $('.device-icon').attr('src', 'assets/images/headphone.png')
+            }else{
+                $('.device-icon').attr('src', 'assets/images/speaker.png')
+            }
+            updateVolume(device)
+
+        }
+
+        const updateVolume = (device) => {
+            $('.stext-vol').text(device.name)
+            if(device.mute){
+                $('.volume-icon').attr('src', 'assets/images/mute.png')
+            }else{
+                if(device.type == "Headphones"){
+                    $('.volume-icon').attr('src', 'assets/images/headphone.png')
+                }else{
+                    $('.volume-icon').attr('src', 'assets/images/speaker.png')
+                }
+            }
+            var volPerc = parseInt(device.volume * 100).toString() + "%"
+            $('.volume-text').text(volPerc)
+            $('.volume-value').animate({'width': volPerc}, 200)
+        }
+
+        const newDevice = (device) => {
+            $('.new-device-name').text(device.name)
+            if(device.type == "Headphones"){
+                $('.added-icon').attr('src', 'assets/images/headphone.png')
+            }else{
+                $('.added-icon').attr('src', 'assets/images/speaker.png')
+            }
+        }
+
+        const removedDevice = (device) => {
+            $('.removed-device-name').text(device.name)
+            if(device.type == "Headphones"){
+                $('.removed-icon').attr('src', 'assets/images/headphone.png')
+            }else{
+                $('.removed-icon').attr('src', 'assets/images/speaker.png')
+            }
+        }
+    </script>
+</body>
+</html>
