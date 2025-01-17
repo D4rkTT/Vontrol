@@ -4,7 +4,7 @@
 
 Vontrol is an Electron-based app for seamless control of multiple audio output devices via keyboard shortcuts. Unlike the default Windows method that requires switching default output, Vontrol lets you switch between outputs and manage directly, making it perfect for enthusiasts with multiple devices.
 
-![Vontrol](Vontrol.png)
+![Vontrol](vontrol-screenshot.png)
 
 ---
 
