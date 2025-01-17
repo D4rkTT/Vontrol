@@ -10,16 +10,12 @@
     <div class="root">
         <div class="container selected-output" style="display: none;">
             <span class="stext">Selected Output</span>
-            <div class="device">
-                <img src="assets/images/headphone.png" class="device-icon-style device-icon">
-                <span class="device-name-style device-name">{{Name}}</span>
-            </div>
         </div>
 
         <div class="container volume-update" style="display: none;">
             <span class="stext-vol">{{Name}}</span>
             <div class="volume">
-                <img src="assets/images/headphone.png" class="volume-icon">
+                <div class="volume-icon"></div>
                 <div class="volume-bar">
                     <div class="volume-value"></div>
                 </div>
@@ -30,7 +26,7 @@
         <div class="container added-device" style="display: none;">
             <span class="stext">New Device</span>
             <div class="device">
-                <img src="assets/images/headphone.png" class="device-icon-style added-icon">
+                <div class="device-icon-style added-icon"></div>
                 <span class="device-name-style new-device-name">{{Name}}</span>
             </div>
         </div>
@@ -38,7 +34,7 @@
         <div class="container removed-device" style="display: none;">
             <span class="stext">Removed Device</span>
             <div class="device">
-                <img src="assets/images/headphone.png" class="device-icon-style removed-icon">
+                <div class="device-icon-style removed-icon"></div>
                 <span class="device-name-style removed-device-name">{{Name}}</span>
             </div>
         </div>
@@ -52,13 +48,28 @@
     </script>
     <script>
         var selectTimeout, volumeTimeout, addedTimeout, removedTimeout
-        window.api.receive("device-update", (data) => {
+
+        const headphoneIcon = '<svg class="device-icon-style device-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M280-120h-80q-33 0-56.5-23.5T120-200v-280q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480v280q0 33-23.5 56.5T760-120h-80q-33 0-56.5-23.5T600-200v-160q0-33 23.5-56.5T680-440h80v-40q0-117-81.5-198.5T480-760q-117 0-198.5 81.5T200-480v40h80q33 0 56.5 23.5T360-360v160q0 33-23.5 56.5T280-120Z"/></svg>',
+        speakerIcon = '<svg class="device-icon-style device-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M680-80H280q-33 0-56.5-23.5T200-160v-640q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v640q0 33-23.5 56.5T680-80ZM480-600q33 0 56.5-23.5T560-680q0-33-23.5-56.5T480-760q-33 0-56.5 23.5T400-680q0 33 23.5 56.5T480-600Zm0 400q66 0 113-47t47-113q0-66-47-113t-113-47q-66 0-113 47t-47 113q0 66 47 113t113 47Zm0-80q-33 0-56.5-23.5T400-360q0-33 23.5-56.5T480-440q33 0 56.5 23.5T560-360q0 33-23.5 56.5T480-280Z"/></svg>',
+        muteIcon = '<svg class="device-icon-style device-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M671-177q-11 7-22 13t-23 11q-15 7-30.5 0T574-176q-6-15 1.5-29.5T598-227q4-2 7.5-4t7.5-4L480-368v111q0 27-24.5 37.5T412-228L280-360H160q-17 0-28.5-11.5T120-400v-160q0-17 11.5-28.5T160-600h88L84-764q-11-11-11-28t11-28q11-11 28-11t28 11l680 680q11 11 11 28t-11 28q-11 11-28 11t-28-11l-93-93Zm89-304q0-83-44-151.5T598-735q-15-7-22-21.5t-2-29.5q6-16 21.5-23t31.5 0q97 43 155 131t58 197q0 33-6 65.5T817-353q-8 22-24.5 27.5t-30.5.5q-14-5-22.5-18t-.5-30q11-26 16-52.5t5-55.5ZM591-623q33 21 51 63t18 80v10q0 5-1 10-2 13-14 17t-22-6l-51-51q-6-6-9-13.5t-3-15.5v-77q0-12 10.5-17.5t20.5.5Zm-201-59q-6-6-6-14t6-14l22-22q19-19 43.5-8.5T480-703v63q0 14-12 19t-22-5l-56-56Z"/></svg>'
+
+
+        window.api.receive("selected-update", (data) => {
             $('.selected-output').show(150)
             clearTimeout(selectTimeout)
             selectTimeout = setTimeout(()=>{
                 $('.selected-output').hide(150)
             }, 1000)
-            updateDevice(data)
+            updateSelected(data)
+        })
+        window.api.receive("devices-update", (data) => {
+            $('.selected-output').show(150)
+            clearTimeout(selectTimeout)
+            selectTimeout = setTimeout(()=>{
+                $('.selected-output').hide(150)
+            }, 1000)
+            //updateDevice(data)
+            updateDevices(data)
         })
 
         window.api.receive("volume-update", (data) => {
@@ -91,23 +102,48 @@
         const updateDevice = (device) => {
             $('.device-name').text(device.name)
             if(device.type == "Headphones"){
-                $('.device-icon').attr('src', 'assets/images/headphone.png')
+                $('.device-icon').attr('src', 'assets/images/headphone.svg')
             }else{
-                $('.device-icon').attr('src', 'assets/images/speaker.png')
+                $('.device-icon').attr('src', 'assets/images/speaker.svg')
             }
             updateVolume(device)
 
         }
 
+        const updateDevices = (devices) => {
+            $('.selected-output').html('') // remove all devices
+            $('<span>', {class: "stext", text: "Selected Output"}).appendTo('.selected-output')
+            for(let device of devices){
+                device.selected ? updateVolume(device): null
+                var dev = $('<div>', {class: `device ${device.selected ? 'selected':''}`, attr: {"device-name": device.name}})
+                if(device.mute){
+                    dev.append(muteIcon)
+                }else{
+                    if(device.type == "Headphones"){
+                        dev.append(headphoneIcon)
+                    }else{
+                        dev.append(speakerIcon)
+                    }
+                }
+                $('<span>', {class: "device-name-style device-name", text: device.name}).appendTo(dev)
+                $('.selected-output').append(dev)
+            }
+        }
+
+        const updateSelected = (device) => {
+            $(`.selected`).removeClass("selected")
+            $(`div[device-name='${device}']`).addClass("selected")
+        }
+
         const updateVolume = (device) => {
             $('.stext-vol').text(device.name)
             if(device.mute){
-                $('.volume-icon').attr('src', 'assets/images/mute.png')
+                $('.volume-icon').html(muteIcon)
             }else{
                 if(device.type == "Headphones"){
-                    $('.volume-icon').attr('src', 'assets/images/headphone.png')
+                    $('.volume-icon').html(headphoneIcon)
                 }else{
-                    $('.volume-icon').attr('src', 'assets/images/speaker.png')
+                    $('.volume-icon').html(speakerIcon)
                 }
             }
             var volPerc = parseInt(device.volume * 100).toString() + "%"
@@ -118,18 +154,18 @@
         const newDevice = (device) => {
             $('.new-device-name').text(device.name)
             if(device.type == "Headphones"){
-                $('.added-icon').attr('src', 'assets/images/headphone.png')
+                $('.added-icon').html(headphoneIcon)
             }else{
-                $('.added-icon').attr('src', 'assets/images/speaker.png')
+                $('.added-icon').html(speakerIcon)
             }
         }
 
         const removedDevice = (device) => {
             $('.removed-device-name').text(device.name)
             if(device.type == "Headphones"){
-                $('.removed-icon').attr('src', 'assets/images/headphone.png')
+                $('.removed-icon').html(headphoneIcon)
             }else{
-                $('.removed-icon').attr('src', 'assets/images/speaker.png')
+                $('.removed-icon').html(speakerIcon)
             }
         }
     </script>

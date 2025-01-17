@@ -1,19 +1,36 @@
-const { app, BrowserWindow, screen, globalShortcut } = require('electron')
+/* START IMPORTS */
+const { app, BrowserWindow, screen, globalShortcut, Menu, Tray } = require('electron')
 const path = require('node:path')
-const {default: SoundMixer, DeviceType, AudioSessionState} = require("native-sound-mixer");
-const { ipcMain, ipcRenderer} = require('electron')
+const {default: SoundMixer, DeviceType} = require("native-sound-mixer");
+const { ipcMain} = require('electron')
+const { createConfigFile, loadConfigFile, openConfigFile } = require("./configManager");
+// END IMPORTS //
 
-const BlackListed = ["Oculus", "AMD High Definition"]
-var mainWindow
-var allDevices = []
-var SELECTED_DEVICE = ""
-const INCREASE_VALUE = 3,
-DECREASE_VALUE = 3
+/* START VARS */
+const INCREASE_VALUE = 1,
+DECREASE_VALUE = 1,
+DEBUG = process.argv[2] && process.argv[2] === '-d';
 
+var mainWindow,
+allDevices = [],
+SELECTED_DEVICE = "",
+lastChange = 0,
+changeTimeout,
+multVal = 1,
+WIDTH = 400,
+HEIGHT = 500,
+config;
+/* END VARS */
+
+/* START ELECTRON FUNCTIONS */
 const createWindow = (sw, sh) => {
-  const WIDTH = 400, HEIGHT = 300
+  if(DEBUG){
+    WIDTH = 800
+    HEIGHT = 800
+  }
   const px = (sw / 2) - (WIDTH / 2)
   const py = 0
+
   mainWindow = new BrowserWindow({
     width: WIDTH,
     height: HEIGHT,
@@ -21,9 +38,9 @@ const createWindow = (sw, sh) => {
     roundedCorners: true,
     x: px,
     y: py,
-    frame: false,
+    frame: DEBUG,
     transparent:true,
-    resizable:false,
+    resizable:DEBUG,
     skipTaskbar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -33,13 +50,76 @@ const createWindow = (sw, sh) => {
     }
   })
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  mainWindow.setIgnoreMouseEvents(!DEBUG, { forward: true });
   mainWindow.setBackgroundMaterial("none")
   mainWindow.loadFile('index.html')
-  //mainWindow.webContents.openDevTools()
+  if(DEBUG) mainWindow.webContents.openDevTools()
 }
 
+const trayInit = () => {
+  let tray = new Tray('resources/app.asar/vontrol.png')
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Edit Config File', click: openConfigFile},
+    { label: 'Exit', click: () => {app.exit(0)}},
+  ])
+  tray.setToolTip('Vontrol Menu')
+  tray.setContextMenu(contextMenu)
+}
+
+const registerShortcuts = ()=>{
+  // Previous Device
+  globalShortcut.register(config.shortcuts.previousDevice, () => {
+    var devices = getAllAudioDevices()
+    for(let d = 0; d < devices.length; d++){
+      var device = devices[d]
+      if(device.selected){
+        if(d != 0){
+          SELECTED_DEVICE = extractDeviceName(devices[d - 1].name)
+        }
+        mainWindow.webContents.send("selected-update", SELECTED_DEVICE)
+      }
+    }
+  })
+
+  // Next Device
+  globalShortcut.register(config.shortcuts.nextDeivce, () => {
+    var devices = getAllAudioDevices()
+    for(let d = 0; d < devices.length; d++){
+      var device = devices[d]
+      if(device.selected){
+        if(d != devices.length - 1){
+          SELECTED_DEVICE = extractDeviceName(devices[d + 1].name)
+        }
+        mainWindow.webContents.send("selected-update", SELECTED_DEVICE)
+      }
+    }
+  })
+
+  // Increase volume
+  globalShortcut.register(config.shortcuts.increase, () => {
+    var device = incVolume(SELECTED_DEVICE, INCREASE_VALUE)
+    mainWindow.webContents.send("volume-update", device)
+  })
+
+  // Decrease volume
+  globalShortcut.register(config.shortcuts.decrease, () => {
+    var device = decVolume(SELECTED_DEVICE, DECREASE_VALUE)
+    mainWindow.webContents.send("volume-update", device)
+  })
+
+  // Mute volume
+  globalShortcut.register(config.shortcuts.mute, () => {
+    var device = muteVolume(SELECTED_DEVICE)
+    mainWindow.webContents.send("volume-update", device)
+  })
+}
+/* END ELECTRON FUNCTIONS */
+
+/* START EVENTS LISTNERS */
 app.whenReady().then(() => {
+  createConfigFile()
+  config = loadConfigFile()
+  trayInit()
   var default_dev = getDefaultAudioDevice()
   SELECTED_DEVICE = extractDeviceName(default_dev.name)
   allDevices = getAllAudioDevicesOnlyName()
@@ -59,12 +139,14 @@ app.whenReady().then(() => {
       for(let device of diff){
         if(allDevices.has(device)){
           // removed device
-          //console.log(`[+] Removed Device: ${JSON.stringify(device)}`)
+          if(SELECTED_DEVICE == device.name){ // FIXING BUG
+            var default_dev = getDefaultAudioDevice()
+            SELECTED_DEVICE = extractDeviceName(default_dev.name)
+          }
           mainWindow.webContents.send("removed-device", device)
         }
         if(newDevices.has(device)){
           // added device
-          //console.log(`[+] Added Device: ${JSON.stringify(device)}`)
           mainWindow.webContents.send("new-device", device)
         }
       }
@@ -84,22 +166,29 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
-function getAllAudioDevices(){
-  var d = SoundMixer.devices.filter(dz => dz.type == DeviceType.RENDER && !BlackListed.include(dz.name));
+ipcMain.on('init', (event) => {
+  mainWindow.webContents.send('devices-update', getAllAudioDevices())
+})
+/* END EVENTS LISTNERS */
+
+/* START AUDIO FUNCTIONS */
+const getAllAudioDevices = () => {
+  var d = SoundMixer.devices.filter(dz => dz.type == DeviceType.RENDER && !config.blacklist.include(dz.name));
   let devices = []
   d.forEach(function(Device){
     let dev = {
       name: extractDeviceName(Device.name),
       volume: Device.volume,
-      mute: Device.mute, type: extractDeviceType(Device.name)
+      mute: Device.mute, type: extractDeviceType(Device.name),
+      selected: SELECTED_DEVICE == extractDeviceName(Device.name)? true: false
     }
     devices.push(dev);
   });
   return devices; // Array of Device
 }
 
-function getAllAudioDevicesOnlyName(){
-  var d = SoundMixer.devices.filter(dz => dz.type == DeviceType.RENDER && !BlackListed.include(dz.name));
+const getAllAudioDevicesOnlyName = () => {
+  var d = SoundMixer.devices.filter(dz => dz.type == DeviceType.RENDER && !config.blacklist.include(dz.name));
   let devices = []
   d.forEach(function(Device){
     let dev = {
@@ -111,19 +200,27 @@ function getAllAudioDevicesOnlyName(){
   return devices; // Array of Device
 }
 
-function getAudioDeviceByName(deviceName){
+const getAudioDeviceByName = (deviceName) => {
   var d = SoundMixer.devices.filter(dz => dz.type == DeviceType.RENDER && dz.name.includes(deviceName))[0];
   return d
 }
 
-function getDefaultAudioDevice(){
+const getDefaultAudioDevice = () => {
   var dev = SoundMixer.getDefaultDevice(DeviceType.RENDER);
   return dev; // Device
 }
 
-function incVolume(device, value){
+const incVolume = (device, value) => {
   var device = getAudioDeviceByName(device)
-  device.volume += (value / 100)
+  if(new Date().getTime() - lastChange < 300){
+    clearTimeout(changeTimeout)
+    if(multVal < 5) multVal += 1 // max 5 
+  }
+  device.volume += ((value * multVal) / 100)
+  lastChange = new Date().getTime()
+  changeTimeout = setTimeout(()=>{
+    multVal = 1
+  }, 300)
   return {
     name: extractDeviceName(device.name),
     volume: device.volume,
@@ -131,9 +228,17 @@ function incVolume(device, value){
   }
 }
 
-function decVolume(device, value){
+const decVolume = (device, value) => {
   var device = getAudioDeviceByName(device)
-  device.volume -= (value / 100)
+  if(new Date().getTime() - lastChange < 300){
+    clearTimeout(changeTimeout)
+    if(multVal < 5) multVal += 1 // max 5 
+  }
+  device.volume -= ((value * multVal) / 100)
+  lastChange = new Date().getTime()
+  changeTimeout = setTimeout(()=>{
+    multVal = 1
+  }, 300)
   return {
     name: extractDeviceName(device.name),
     volume: device.volume,
@@ -141,7 +246,7 @@ function decVolume(device, value){
   }
 }
 
-function muteVolume(device){
+const muteVolume = (device) => {
   var device = getAudioDeviceByName(device)
   device.mute = !device.mute
   return {
@@ -151,7 +256,7 @@ function muteVolume(device){
   }
 }
 
-function getAudioDeviceDetailsByName(device){
+const getAudioDeviceDetailsByName = (device) => {
   var device = getAudioDeviceByName(device)
   return {
     name: extractDeviceName(device.name),
@@ -160,74 +265,43 @@ function getAudioDeviceDetailsByName(device){
   }
 }
 
-ipcMain.on('init', (event) => {
-  mainWindow.webContents.send('device-update', getAudioDeviceDetailsByName(SELECTED_DEVICE))
-})
+/* END AUDIO FUNCTIONS */
 
-const registerShortcuts = ()=>{
-  // Next Device
-  globalShortcut.register('CmdOrCtrl+Shift+[', () => {
-    //console.log(`[+] Current Device: ${SELECTED_DEVICE}`)
-    var devices = getAllAudioDevices()
-    //console.log(`[+] Total Devices: ${JSON.stringify(devices)}`)
-    var dIndex = devices.objectIndexOf("name", SELECTED_DEVICE)
-    //console.log(`[+] Current index: ${dIndex}`)
-    if(dIndex != 0){
-      dIndex -= 1
-    }
-    //console.log(`[+] New index: ${dIndex}`)
-    SELECTED_DEVICE = devices[dIndex].name
-    mainWindow.webContents.send("device-update", devices[dIndex])
-  })
-
-  // Previous Device
-  globalShortcut.register('CmdOrCtrl+Shift+]', () => {
-    //console.log(`[+] Current Device: ${SELECTED_DEVICE}`)
-    var devices = getAllAudioDevices()
-    //console.log(`[+] Total Devices: ${JSON.stringify(devices)}`)
-    var dIndex = devices.objectIndexOf("name", SELECTED_DEVICE)
-    //console.log(`[+] Current index: ${dIndex}`)
-    if(dIndex != devices.length - 1){
-      dIndex += 1
-    }
-    //console.log(`[+] New index: ${dIndex}`)
-    SELECTED_DEVICE = devices[dIndex].name
-    mainWindow.webContents.send("device-update", devices[dIndex])
-  })
-
-  // Increase volume
-  globalShortcut.register('CmdOrCtrl+Shift+p', () => {
-    var device = incVolume(SELECTED_DEVICE, INCREASE_VALUE)
-    mainWindow.webContents.send("volume-update", device)
-  })
-
-  // Decrease volume
-  globalShortcut.register('CmdOrCtrl+Shift+o', () => {
-    var device = decVolume(SELECTED_DEVICE, DECREASE_VALUE)
-    mainWindow.webContents.send("volume-update", device)
-  })
-
-  // Mute volume
-  globalShortcut.register('CmdOrCtrl+Shift+i', () => {
-    var device = muteVolume(SELECTED_DEVICE)
-    mainWindow.webContents.send("volume-update", device)
-  })
+/* START UTILS FUNCTIONS */
+const fillArray = (arr, count, fill=null) => {
+  for(let i=0; i < count; i++){
+    arr.push(fill)
+  }
+  return arr
 }
 
-Object.prototype.include = function (searchString) {
+const extractDeviceName = (text) => {
+  const match = text.match(/\(([^)]+)\)/);
+  return match ? match[1] : text;
+}
+
+const extractDeviceType = (text) => {
+  const match = text.match(/^(.+?)\s*\(/);
+  return match ? match[1].trim() : "Speaker";
+}
+/* END UTILS FUNCTIONS */
+
+
+/* START PROTOTYPE FUNCTION */
+Object.prototype.include = function(searchString) {
   return this.some(value => searchString.includes(value));
 };
 
-Object.prototype.objectIndexOf = function (param, searchString) {
+Object.prototype.objectIndexOf = (param, searchString) => {
   for(let i = 0; i < this.length; i++){
     if(this[i][param] == searchString){
       return i
     }
   }
-  return -1
+  return null
 };
 
-Object.prototype.differences = function (arr) {
+Object.prototype.differences = function(arr) {
   if(typeof arr != "object"){
     return []
   }
@@ -261,23 +335,7 @@ Object.prototype.differences = function (arr) {
   return differences
 };
 
-Object.prototype.has = function (obj) {
+Object.prototype.has = function(obj) {
     return JSON.stringify(this).includes(JSON.stringify(obj))
 };
-
-function fillArray(arr, count, fill=null){
-  for(let i=0; i < count; i++){
-    arr.push(fill)
-  }
-  return arr
-}
-
-function extractDeviceName(text) {
-  const match = text.match(/\(([^)]+)\)/);
-  return match ? match[1] : text;
-}
-
-function extractDeviceType(text) {
-  const match = text.match(/^(.+?)\s*\(/);
-  return match ? match[1].trim() : "Speaker";
-}
+/* END PROTOTYPE FUNCTION */

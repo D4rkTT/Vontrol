@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld(
             }
         },
         receive: (channel, func) => {
-            let validChannels = ["volume-update", "device-update", "new-device", "removed-device"];
+            let validChannels = ["volume-update", "devices-update", "new-device", "removed-device", "selected-update"];
             if (validChannels.includes(channel)) {
                 ipcRenderer.on(channel, (event, ...args) => func(...args));
             }

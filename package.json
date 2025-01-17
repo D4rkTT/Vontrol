@@ -1,9 +1,10 @@
 {
   "name": "vontrol",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Volume control using keyboard shortcuts that allow to switch between available outputs",
   "main": "app.js",
   "scripts": {
+    "debug": "electron . -d",
     "test": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
