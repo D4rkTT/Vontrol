@@ -80,11 +80,13 @@ Download the prebuilt app from the [🚀 Releases](https://github.com/D4rkTT/Von
 
 ## ⌨️ Shortcuts
 
-- **➡️ Next Output**: `CmdOrCtrl+Shift+[`
-- **⬅️ Previous Output**: `CmdOrCtrl+Shift+]`
-- **🔼 Increase Volume**: `CmdOrCtrl+Shift+p`
-- **🔽 Decrease Volume**: `CmdOrCtrl+Shift+o`
-- **🔇 Mute/Unmute**: `CmdOrCtrl+Shift+i`
+- **➡️ Next Output**: `CmdOrCtrl+Alt+]`
+- **⬅️ Previous Output**: `CmdOrCtrl+Alt+[`
+- **🔼 Increase Volume**: `Alt+]`
+- **🔽 Decrease Volume**: `Alt+[`
+- **🔇 Mute/Unmute**: `Alt+i`
+
+Now you can use signle keyboard knob and switch devices with same knob while holding Ctrl
 
 ---
 
