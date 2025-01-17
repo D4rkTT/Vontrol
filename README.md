@@ -15,6 +15,35 @@ Vontrol is an Electron-based app for seamless control of multiple audio output d
 - **🖼️ Modern User-Friendly Interface**: Intuitive UI for managing and shortcuts.
 - **❌ Non-Default Output Control**: Manage levels without altering the system's default.
 - **📢 Device Detection Notifications**: Get notified when a new device is connected or removed.
+- **⚙️ Customizable Config**: Allows users to customize ⌨️ shortcuts and blacklist specific 🎧 outputs.
+- **📌 Tray Icon**: Quick access to essential functions, including:
+  - 📝 Open Config File
+  - ❌ Exit the Application
+
+---
+
+## ⚙️ Configuration
+
+Vontrol provides a customizable `config.json` file, allowing users to modify default shortcuts and blacklist unwanted audio devices.
+
+### Default Configuration
+```config.json
+{ 
+    "shortcuts": {
+      "nextDevice": "CmdOrCtrl+Alt+]",
+      "previousDevice": "CmdOrCtrl+Alt+[",
+      "increase": "Alt+]",
+      "decrease": "Alt+[",
+      "mute": "Alt+i"
+    },
+    "blacklist": []
+}
+```
+### Features
+- **🎚️ Custom Shortcuts**: Modify key bindings to fit personal preferences.
+- **🚫 Blacklist Audio Devices**: Hide specific 🔊 outputs from selection.
+
+For supported shortcut key bindings, refer to [Electron Shortcuts](https://www.electronjs.org/docs/latest/api/accelerator).
 
 ---
 
@@ -59,16 +88,21 @@ Download the prebuilt app from the [🚀 Releases](https://github.com/D4rkTT/Von
 
 ---
 
-## 🔮 Future Features
+## 🔮 TODO
 
-- ✏️ Customizable shortcuts for enhanced flexibility.
+- ~~✏️ Customizable shortcuts for enhanced flexibility.~~ ☑️
+- ~~📌 Tray icon to control the app~~ ☑️
 
 ---
 
-## 🚀 Benefits
+## 📝 Changelog
 
-- **⏳ Time-Saving**: Skip navigating settings to control multiple devices.
-- **⚡ Efficient**: Directly manage non-default devices, boosting productivity.
+### 🆕 V1.0.0 Update
+- 🐛 **Bug Fixes**: Improved stability and resolved reported issues.
+- ⚡ **Code Optimization**: Enhanced performance and efficiency.
+- 🎛️ **New Output Selection UI**: Redesigned interface for better device management.
+- ⚙️ **Customizable Config**: Users can now modify shortcuts and blacklist specific devices.
+- 📌 **Tray Icon**: Quick access menu for opening the config file and exiting the app.
 
 ---
 
