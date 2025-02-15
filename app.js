@@ -3,6 +3,7 @@ const { app, BrowserWindow, screen, globalShortcut, Menu, Tray } = require('elec
 const path = require('node:path')
 const {default: SoundMixer, DeviceType} = require("native-sound-mixer");
 const { ipcMain} = require('electron')
+const winston = require('winston');
 const { createConfigFile, loadConfigFile, openConfigFile } = require("./configManager");
 // END IMPORTS //
 
@@ -21,6 +22,22 @@ WIDTH = 400,
 HEIGHT = 500,
 config;
 /* END VARS */
+
+/* START LOGGER */
+const logger = winston.createLogger({
+  level: 'error',
+  format: winston.format.simple(),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' })
+  ],
+});
+
+if(DEBUG){
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+}
+/* END LOGGER */
 
 /* START ELECTRON FUNCTIONS */
 const createWindow = (sw, sh) => {
@@ -52,12 +69,12 @@ const createWindow = (sw, sh) => {
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.setIgnoreMouseEvents(!DEBUG, { forward: true });
   mainWindow.setBackgroundMaterial("none")
-  mainWindow.loadFile('index.html')
+  mainWindow.loadFile(path.join(__dirname, "index.html"))
   if(DEBUG) mainWindow.webContents.openDevTools()
 }
 
 const trayInit = () => {
-  let tray = new Tray('resources/app.asar/vontrol.png')
+  let tray = new Tray(path.join(__dirname, "vontrol.png"))
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Edit Config File', click: openConfigFile},
     { label: 'Exit', click: () => {app.exit(0)}},
@@ -117,45 +134,50 @@ const registerShortcuts = ()=>{
 
 /* START EVENTS LISTNERS */
 app.whenReady().then(() => {
-  createConfigFile()
-  config = loadConfigFile()
-  trayInit()
-  var default_dev = getDefaultAudioDevice()
-  SELECTED_DEVICE = extractDeviceName(default_dev.name)
-  allDevices = getAllAudioDevicesOnlyName()
-  const displays = screen.getAllDisplays()
-  const mainDisplay = displays.find((display) => {
-    return display.bounds.x == 0 && display.bounds.y == 0
-  })
-  
-  createWindow(mainDisplay.bounds.width, mainDisplay.bounds.height)
+  try {
+      createConfigFile()
+      config = loadConfigFile()
+      trayInit()
+      var default_dev = getDefaultAudioDevice()
+      SELECTED_DEVICE = extractDeviceName(default_dev.name)
+      allDevices = getAllAudioDevicesOnlyName()
+      const displays = screen.getAllDisplays()
+      const mainDisplay = displays.find((display) => {
+        return display.bounds.x == 0 && display.bounds.y == 0
+      })
+      
+      createWindow(mainDisplay.bounds.width, mainDisplay.bounds.height)
 
-  registerShortcuts()
+      registerShortcuts()
 
-  setInterval(()=>{
-      let newDevices = getAllAudioDevicesOnlyName()
-      let diff = allDevices.differences(newDevices)
+      setInterval(()=>{
+          let newDevices = getAllAudioDevicesOnlyName()
+          let diff = allDevices.differences(newDevices)
 
-      for(let device of diff){
-        if(allDevices.has(device)){
-          // removed device
-          if(SELECTED_DEVICE == device.name){ // FIXING BUG
-            var default_dev = getDefaultAudioDevice()
-            SELECTED_DEVICE = extractDeviceName(default_dev.name)
+          for(let device of diff){
+            if(allDevices.has(device)){
+              // removed device
+              if(SELECTED_DEVICE == device.name){ // FIXING BUG
+                var default_dev = getDefaultAudioDevice()
+                SELECTED_DEVICE = extractDeviceName(default_dev.name)
+              }
+              mainWindow.webContents.send("removed-device", device)
+            }
+            if(newDevices.has(device)){
+              // added device
+              mainWindow.webContents.send("new-device", device)
+            }
           }
-          mainWindow.webContents.send("removed-device", device)
-        }
-        if(newDevices.has(device)){
-          // added device
-          mainWindow.webContents.send("new-device", device)
-        }
-      }
-      allDevices = newDevices
-  }, 500)
+          allDevices = newDevices
+      }, 500)
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow(mainDisplay.bounds.width, mainDisplay.bounds.height)
+      })
+  } catch (err) {
+    logger.log({level: 'error', message: err})
+  }
+  
 })
 
 app.on('window-all-closed', () => {
