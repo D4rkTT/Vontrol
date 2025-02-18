@@ -62,14 +62,17 @@
             }, 1000)
             updateSelected(data)
         })
+
         window.api.receive("devices-update", (data) => {
-            $('.selected-output').show(150)
-            clearTimeout(selectTimeout)
-            selectTimeout = setTimeout(()=>{
-                $('.selected-output').hide(150)
-            }, 1000)
+            if(!data.silent){
+                $('.selected-output').show(150)
+                clearTimeout(selectTimeout)
+                selectTimeout = setTimeout(()=>{
+                    $('.selected-output').hide(150)
+                }, 1000)
+            }
             //updateDevice(data)
-            updateDevices(data)
+            updateDevices(data.data)
         })
 
         window.api.receive("volume-update", (data) => {

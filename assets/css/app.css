@@ -20,10 +20,10 @@ body {
 .container {
     width: 290px;
     height: auto;
-    background-color: #000000e0;
-    border-radius: 10px;
+    background-color: #000000c7;
+    border-radius: 7px;
     color: #fff;
-    padding: 15px 20px 10px 20px;
+    padding: 5px 10px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -32,21 +32,20 @@ body {
     -webkit-box-shadow: 1px 2px 13px 0px rgba(0,0,0,0.20);
     -moz-box-shadow: 1px 2px 13px 0px rgba(0,0,0,0.20);
     box-shadow: 1px 2px 13px 0px rgba(0,0,0,0.20);
-    padding: 15px 20px 10px 20px;
 }
 
 .stext {
     font-family: 'Inter';
     font-size: 12px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin: 5px 0;
 }
 
 .stext-vol {
     font-family: 'Inter';
     font-size: 12px;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin: 5px 0;
 }
 
 .device {
@@ -57,13 +56,14 @@ body {
 }
 
 .device-icon-style {
-    margin-right: 10px;
-    width: 23px;
+    width: 20px;
 }
 
 .device-name-style {
     font-family: 'Inter';
     font-weight: normal;
+    margin-left: 5px;
+    font-size: 15px;
 }
 
 .volume-text {
@@ -74,10 +74,10 @@ body {
 .volume-bar {
     position: relative;
     width: 210px;
-    height: 6px;
+    height: 4px;
     background: #383838;
-    border-radius: 6px;
-    margin-right: 10px;
+    border-radius: 4px;
+    margin: 0 10px;
     overflow: hidden;
 }
 

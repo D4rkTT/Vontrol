@@ -70,15 +70,21 @@ const createWindow = (sw, sh) => {
   mainWindow.setIgnoreMouseEvents(!DEBUG, { forward: true });
   mainWindow.setBackgroundMaterial("none")
   mainWindow.loadFile(path.join(__dirname, "index.html"))
-  if(DEBUG) mainWindow.webContents.openDevTools()
+  //if(DEBUG) mainWindow.webContents.openDevTools()
+}
+
+const toggleDevTools = ()=>{
+  mainWindow.webContents.toggleDevTools()
 }
 
 const trayInit = () => {
   let tray = new Tray(path.join(__dirname, "vontrol.png"))
-  const contextMenu = Menu.buildFromTemplate([
+  let temp = [
     { label: 'Edit Config File', click: openConfigFile},
     { label: 'Exit', click: () => {app.exit(0)}},
-  ])
+  ]
+  if(DEBUG) temp.push({label: 'Toggle DevTools', click: toggleDevTools})
+  const contextMenu = Menu.buildFromTemplate(temp)
   tray.setToolTip('Vontrol Menu')
   tray.setContextMenu(contextMenu)
 }
@@ -137,7 +143,6 @@ app.whenReady().then(() => {
   try {
       createConfigFile()
       config = loadConfigFile()
-      trayInit()
       var default_dev = getDefaultAudioDevice()
       SELECTED_DEVICE = extractDeviceName(default_dev.name)
       allDevices = getAllAudioDevicesOnlyName()
@@ -147,7 +152,7 @@ app.whenReady().then(() => {
       })
       
       createWindow(mainDisplay.bounds.width, mainDisplay.bounds.height)
-
+      trayInit()
       registerShortcuts()
 
       setInterval(()=>{
@@ -162,10 +167,12 @@ app.whenReady().then(() => {
                 SELECTED_DEVICE = extractDeviceName(default_dev.name)
               }
               mainWindow.webContents.send("removed-device", device)
+              mainWindow.webContents.send('devices-update', {data: getAllAudioDevices(), silent: true})
             }
             if(newDevices.has(device)){
               // added device
               mainWindow.webContents.send("new-device", device)
+              mainWindow.webContents.send('devices-update', {data: getAllAudioDevices(), silent: true})
             }
           }
           allDevices = newDevices
@@ -189,7 +196,7 @@ app.on('will-quit', () => {
 })
 
 ipcMain.on('init', (event) => {
-  mainWindow.webContents.send('devices-update', getAllAudioDevices())
+  mainWindow.webContents.send('devices-update', {data: getAllAudioDevices(), silent: false})
 })
 /* END EVENTS LISTNERS */
 
